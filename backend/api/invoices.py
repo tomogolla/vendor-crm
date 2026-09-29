@@ -13,7 +13,7 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import ApprovalInvoice, VendorLead
+from .models import MARKET_WEEKENDS, ApprovalInvoice, MarketWeekendBooking, VendorLead
 
 
 logger = logging.getLogger(__name__)
@@ -114,4 +114,11 @@ class ApproveAndSendInvoice(APIView):
 
             lead.application_decision = 'accepted'
             lead.save(update_fields=['application_decision'])
+            selected_weekends = {
+                value.strip() for value in invoice.weekend_dates.split(' | ') if value.strip()
+            }
+            MarketWeekendBooking.objects.bulk_create([
+                MarketWeekendBooking(lead=lead, invoice=invoice, weekend=weekend)
+                for weekend in MARKET_WEEKENDS if weekend in selected_weekends
+            ])
             return Response(invoice_data(invoice), status=status.HTTP_201_CREATED)

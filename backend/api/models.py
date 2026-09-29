@@ -11,6 +11,12 @@ CATEGORIES = [
     'Vintage Jewelry', 'Vintage Upcycled',
 ]
 LEAD_SOURCES = ['Instagram', 'Email', 'Meta ads', 'Shopify form', 'Google form']
+MARKET_WEEKENDS = [
+    'October 10 & 11', 'October 17 & 18', 'October 24 & 25',
+    'October 31 & November 1', 'November 7 & 8', 'November 14 & 15',
+    'November 21 & 22', 'November 28 & 29', 'December 5 & 6',
+    'December 12 & 13', 'December 19 & 20', 'December 26 & 27',
+]
 
 
 class VendorLead(models.Model):
@@ -82,3 +88,21 @@ class ApprovalInvoice(models.Model):
 
     def __str__(self):
         return self.number
+
+
+class MarketWeekendBooking(models.Model):
+    lead = models.ForeignKey(VendorLead, on_delete=models.PROTECT, related_name='market_bookings')
+    invoice = models.ForeignKey(ApprovalInvoice, on_delete=models.PROTECT, related_name='market_bookings')
+    weekend = models.CharField(max_length=50, choices=[(value, value) for value in MARKET_WEEKENDS])
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['weekend', 'lead__business_name', 'lead_id']
+        constraints = [
+            models.UniqueConstraint(fields=['lead', 'weekend'], name='unique_vendor_market_weekend'),
+            models.CheckConstraint(condition=models.Q(amount_paid__gte=0), name='market_booking_nonnegative_paid'),
+        ]
+
+    def __str__(self):
+        return f'{self.lead.business_name} — {self.weekend}'

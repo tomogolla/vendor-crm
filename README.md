@@ -66,3 +66,16 @@ not approve the vendor. The modal requires a vendor email, invoice amount in USD
 due date, and an HTTPS invoice link supplied by the rep. The approval email uses
 the Good Flea welcome template and includes the amount, due date, selected market
 dates, and invoice link. The app does not generate a payment link or collect payments.
+
+## Market weekends
+
+The **Market weekends** page shows all twelve fall weekends as tabs. Each weekend
+has 40 booth spaces and reports booked vendors, remaining spaces, and the total
+payment received for that weekend. Approved vendors are added automatically to
+each market weekend selected on their lead profile.
+
+Payments are tracked per vendor and weekend so a multi-weekend invoice is not
+counted in full on every date. Update **Market weekend bookings** in Django admin
+when payment is received; the page then updates the vendor's amount and weekend
+total. Sending an invoice creates the bookings with `$0.00` paid until payment is
+recorded.

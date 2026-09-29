@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from .models import ApprovalInvoice, VendorLead
+from .models import ApprovalInvoice, MarketWeekendBooking, VendorLead
 
 
 class ApprovalInvoiceTests(APITestCase):
@@ -36,6 +36,10 @@ class ApprovalInvoiceTests(APITestCase):
         self.assertEqual(invoice.amount, 125)
         self.assertEqual(invoice.invoice_link, self.payload['invoice_link'])
         self.assertEqual(invoice.weekend_dates, self.lead.agreed_weekend_dates)
+        self.assertEqual(
+            list(MarketWeekendBooking.objects.filter(lead=self.lead).values_list('weekend', flat=True)),
+            ['October 10 & 11', 'October 17 & 18'],
+        )
         self.assertEqual(response.data['number'], invoice.number)
         self.assertEqual(len(mail.outbox), 1)
         message = mail.outbox[0]
@@ -66,6 +70,7 @@ class ApprovalInvoiceTests(APITestCase):
         response = self.client.post(self.url, self.payload, format='json')
         self.assertEqual(response.status_code, 503)
         self.assertFalse(ApprovalInvoice.objects.exists())
+        self.assertFalse(MarketWeekendBooking.objects.exists())
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.application_decision, 'pending')
 
