@@ -79,3 +79,28 @@ counted in full on every date. Update **Market weekend bookings** in Django admi
 when payment is received; the page then updates the vendor's amount and weekend
 total. Sending an invoice creates the bookings with `$0.00` paid until payment is
 recorded.
+
+## Application pipeline and CSV import
+
+The **Applications** page lists records in the `New application` funnel stage.
+Choose **Import vendors CSV** to upload a UTF-8 CSV up to 2 MB or 5,000 data rows.
+Every row must include a business name and Instagram handle. Supported headers are:
+
+```text
+Business Name, Instagram, Email, Phone, Category, Source, First Name,
+Last Name, Contact Name, Notes, Requested Dates
+```
+
+Underscored equivalents such as `business_name`, `instagram_handle`, and
+`vendor_category` are also accepted. If category is absent it defaults to
+`Unique Things`; source defaults to `Google form`; interest defaults to `Cold`.
+Requested dates containing multiple weekends must be quoted in the CSV and use
+` | ` between dates.
+
+Instagram handles are stripped of `@` and compared case-insensitively against
+existing records and earlier rows in the same file. Duplicate rows are skipped
+and reported. Invalid rows are reported by row number while valid rows import.
+
+Imported records open in the same vendor applicant profile used for review. When
+**Accept application** successfully sends the approval invoice, the funnel stage
+changes to `Vendor`: the record leaves Applications and appears in Vendors.

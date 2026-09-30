@@ -17,7 +17,6 @@ from .models import MARKET_WEEKENDS, ApprovalInvoice, MarketWeekendBooking, Vend
 
 
 logger = logging.getLogger(__name__)
-FROM_EMAIL = 'booking@thegoodflea.com'
 
 
 class ApprovalInvoiceInput(serializers.Serializer):
@@ -102,7 +101,7 @@ class ApproveAndSendInvoice(APIView):
                 sent = EmailMessage(
                     subject=f'The Good Flea vendor approval and invoice {invoice.number}',
                     body=invoice_message(lead, invoice),
-                    from_email=FROM_EMAIL,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[invoice.recipient_email],
                 ).send()
                 if sent != 1:
@@ -113,7 +112,8 @@ class ApproveAndSendInvoice(APIView):
                 return Response({'non_field_errors': ['The invoice email could not be sent. The application was not approved. Please try again.']}, status=status.HTTP_502_BAD_GATEWAY)
 
             lead.application_decision = 'accepted'
-            lead.save(update_fields=['application_decision'])
+            lead.funnel_stage = 'vendor'
+            lead.save(update_fields=['application_decision', 'funnel_stage'])
             selected_weekends = {
                 value.strip() for value in invoice.weekend_dates.split(' | ') if value.strip()
             }

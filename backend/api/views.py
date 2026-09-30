@@ -9,8 +9,9 @@ from .serializers import VendorLeadSerializer
 
 class VendorLeadListCreate(APIView):
     def get(self, request):
+        leads = VendorLead.objects.filter(funnel_stage='vendor')
         return Response({
-            'leads': VendorLeadSerializer(VendorLead.objects.all(), many=True).data,
+            'leads': VendorLeadSerializer(leads, many=True).data,
             'categories': CATEGORIES,
             'sources': LEAD_SOURCES,
         })

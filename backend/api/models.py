@@ -10,7 +10,7 @@ CATEGORIES = [
     'Vintage Clothing', 'Vintage General', 'Vintage Homeware',
     'Vintage Jewelry', 'Vintage Upcycled',
 ]
-LEAD_SOURCES = ['Instagram', 'Email', 'Meta ads', 'Shopify form', 'Google form']
+LEAD_SOURCES = ['Instagram', 'Email', 'Meta ads', 'Shopify form', 'Google form', 'Google Sheets']
 MARKET_WEEKENDS = [
     'October 10 & 11', 'October 17 & 18', 'October 24 & 25',
     'October 31 & November 1', 'November 7 & 8', 'November 14 & 15',
@@ -20,6 +20,8 @@ MARKET_WEEKENDS = [
 
 
 class VendorLead(models.Model):
+    FUNNEL_STAGES = [('new_application', 'New application'), ('vendor', 'Vendor')]
+
     instagram_handle = models.CharField(max_length=30, blank=True)
     business_name = models.CharField(max_length=200)
     first_name = models.CharField(max_length=100, blank=True)
@@ -61,6 +63,7 @@ class VendorLead(models.Model):
     coi = models.BooleanField(default=False)
     info_packet = models.BooleanField(default=False)
     application_decision = models.CharField(max_length=10, default='pending', choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('waitlisted', 'Waitlisted'), ('declined', 'Declined')])
+    funnel_stage = models.CharField(max_length=20, choices=FUNNEL_STAGES, default='vendor', db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

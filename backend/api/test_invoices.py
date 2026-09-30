@@ -26,12 +26,13 @@ class ApprovalInvoiceTests(APITestCase):
             'invoice_link': 'https://payments.example.com/invoices/gf-125',
         }
 
-    @override_settings(INVOICE_EMAIL_READY=True, MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}})
+    @override_settings(INVOICE_EMAIL_READY=True, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_approval_sends_invoice_and_records_it_once(self):
         response = self.client.post(self.url, self.payload, format='json')
         self.assertEqual(response.status_code, 201, response.data)
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.application_decision, 'accepted')
+        self.assertEqual(self.lead.funnel_stage, 'vendor')
         invoice = ApprovalInvoice.objects.get(lead=self.lead)
         self.assertEqual(invoice.amount, 125)
         self.assertEqual(invoice.invoice_link, self.payload['invoice_link'])
@@ -74,7 +75,8 @@ class ApprovalInvoiceTests(APITestCase):
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.application_decision, 'pending')
 
-    @override_settings(INVOICE_EMAIL_READY=True, MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}})
+
+    @override_settings(INVOICE_EMAIL_READY=True, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_invalid_invoice_or_missing_email_cannot_approve(self):
         for invalid in ({'amount': '-1'}, {'due_date': '2000-01-01'}, {'invoice_link': ''}, {'invoice_link': 'http://payments.example.com/invoice/1'}):
             response = self.client.post(self.url, {**self.payload, **invalid}, format='json')
@@ -84,7 +86,7 @@ class ApprovalInvoiceTests(APITestCase):
         self.assertEqual(self.client.post(self.url, self.payload, format='json').status_code, 400)
         self.assertFalse(ApprovalInvoice.objects.exists())
 
-    @override_settings(INVOICE_EMAIL_READY=True, MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}})
+    @override_settings(INVOICE_EMAIL_READY=True, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_delivery_failure_leaves_application_unapproved(self):
         with patch('api.invoices.EmailMessage.send', side_effect=OSError('smtp unavailable')), patch('api.invoices.logger.exception'):
             response = self.client.post(self.url, self.payload, format='json')
@@ -92,3 +94,53 @@ class ApprovalInvoiceTests(APITestCase):
         self.assertFalse(ApprovalInvoice.objects.exists())
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.application_decision, 'pending')
+
+
+class VendorSequenceEmailTests(APITestCase):
+    def setUp(self):
+        self.lead = VendorLead.objects.create(
+            business_name='Astoria Vintage',
+            first_name='Jane',
+            email='vendor@example.com',
+        )
+        self.url = reverse('vendor-lead-email-sequence', kwargs={'pk': self.lead.pk})
+        self.payload = {
+            'template_id': 'welcome',
+            'subject': 'Welcome to The Good Flea!',
+            'body': 'Hi Astoria Vintage, welcome aboard.',
+        }
+
+    @override_settings(
+        INVOICE_EMAIL_READY=True,
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='hello@thegoodflea.com',
+    )
+    def test_sends_edited_template_to_vendor(self):
+        response = self.client.post(self.url, self.payload, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['recipient_email'], self.lead.email)
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.subject, self.payload['subject'])
+        self.assertEqual(message.body, self.payload['body'])
+        self.assertEqual(message.from_email, 'hello@thegoodflea.com')
+        self.assertEqual(message.to, [self.lead.email])
+
+    @override_settings(INVOICE_EMAIL_READY=True)
+    def test_rejects_unknown_template_and_missing_recipient(self):
+        response = self.client.post(self.url, {**self.payload, 'template_id': 'unknown'}, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.lead.email = ''
+        self.lead.save(update_fields=['email'])
+        response = self.client.post(self.url, self.payload, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(mail.outbox)
+
+    @override_settings(
+        INVOICE_EMAIL_READY=True,
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    def test_delivery_failure_returns_gateway_error(self):
+        with patch('api.email_sequences.EmailMessage.send', side_effect=OSError('smtp unavailable')):
+            response = self.client.post(self.url, self.payload, format='json')
+        self.assertEqual(response.status_code, 502)

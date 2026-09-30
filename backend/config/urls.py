@@ -18,12 +18,17 @@ from django.contrib import admin
 from django.urls import path
 from api.views import VendorLeadListCreate, VendorLeadDetail
 from api.invoices import ApproveAndSendInvoice
+from api.email_sequences import SendSequenceEmail
 from api.market_weekends import MarketWeekendList
+from api.applications import ApplicationCsvImport, ApplicationList
 
 urlpatterns = [
+    path('api/applications/', ApplicationList.as_view(), name='applications'),
+    path('api/applications/import-csv/', ApplicationCsvImport.as_view(), name='application-csv-import'),
     path('api/vendor-leads/', VendorLeadListCreate.as_view(), name='vendor-leads'),
     path('api/vendor-leads/<int:pk>/', VendorLeadDetail.as_view(), name='vendor-lead-detail'),
     path('api/vendor-leads/<int:pk>/approve-invoice/', ApproveAndSendInvoice.as_view(), name='vendor-lead-approve-invoice'),
+    path('api/vendor-leads/<int:pk>/email-sequence/', SendSequenceEmail.as_view(), name='vendor-lead-email-sequence'),
     path('api/market-weekends/', MarketWeekendList.as_view(), name='market-weekends'),
     path('admin/', admin.site.urls),
 ]

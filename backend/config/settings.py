@@ -124,18 +124,13 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-INVOICE_EMAIL_READY = bool(os.environ.get('SMTP_HOST'))
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
-        'OPTIONS': {
-            'host': os.environ.get('SMTP_HOST', ''),
-            'port': int(os.environ.get('SMTP_PORT', '587')),
-            'username': os.environ.get('SMTP_USERNAME', ''),
-            'password': os.environ.get('SMTP_PASSWORD', ''),
-            'use_tls': os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true',
-            'use_ssl': os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true',
-            'timeout': 15,
-        },
-    },
-}
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('SMTP_HOST', '')
+EMAIL_PORT = int(os.environ.get('SMTP_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('SMTP_USERNAME', '')
+EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
+EMAIL_TIMEOUT = 15
+DEFAULT_FROM_EMAIL = os.environ.get('SMTP_FROM')
+INVOICE_EMAIL_READY = bool(EMAIL_HOST)

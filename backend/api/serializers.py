@@ -14,7 +14,7 @@ class VendorLeadSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def validate_instagram_handle(self, value):
-        value = value.removeprefix('@')
+        value = value.strip().removeprefix('@').lower()
         if value and not re.fullmatch(r'[A-Za-z0-9._]{1,30}', value):
             raise serializers.ValidationError('Enter a valid Instagram handle, without a URL.')
         return value
