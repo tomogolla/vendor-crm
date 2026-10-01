@@ -5,13 +5,14 @@ from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from .test_utils import AuthenticatedAPITestCase
 
 from .models import ApprovalInvoice, MarketWeekendBooking, VendorLead
 
 
-class ApprovalInvoiceTests(APITestCase):
+class ApprovalInvoiceTests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.lead = VendorLead.objects.create(
             business_name='Astoria Vintage',
             first_name='Jane',
@@ -96,8 +97,9 @@ class ApprovalInvoiceTests(APITestCase):
         self.assertEqual(self.lead.application_decision, 'pending')
 
 
-class VendorSequenceEmailTests(APITestCase):
+class VendorSequenceEmailTests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.lead = VendorLead.objects.create(
             business_name='Astoria Vintage',
             first_name='Jane',

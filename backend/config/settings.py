@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +22,31 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-rt*y!4ut3^@joju1a6-xrio4z+x0b*c0wm4rp$(t)_2u0(b$)l'
-
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-development-only-change-me')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'true').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get(
+    'ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]'
+).split(',') if host.strip()]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get(
+    'CSRF_TRUSTED_ORIGINS', ''
+).split(',') if origin.strip()]
+
+if not DEBUG:
+    if len(SECRET_KEY) < 50 or SECRET_KEY.startswith('django-insecure-'):
+        raise ImproperlyConfigured('Production requires a random SECRET_KEY of at least 50 characters.')
+    if not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS:
+        raise ImproperlyConfigured('Production requires explicit ALLOWED_HOSTS.')
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+# Caddy enforces HTTPS at the edge. Internal frontend-to-API traffic uses HTTP.
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'false').lower() == 'true'
+# Enable only behind the private Docker network and trusted reverse proxy.
+if os.environ.get('TRUST_PROXY', 'false').lower() == 'true':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -40,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'rest_framework.authtoken',
     'api',
 ]
 
@@ -79,7 +100,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.environ.get('DATABASE_PATH', BASE_DIR / 'db.sqlite3'),
+        'OPTIONS': {'timeout': 20},
     }
 }
 
@@ -118,7 +140,18 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 
 
 # Email
@@ -132,5 +165,5 @@ EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
 EMAIL_USE_SSL = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
 EMAIL_TIMEOUT = 15
-DEFAULT_FROM_EMAIL = os.environ.get('SMTP_FROM')
+DEFAULT_FROM_EMAIL = os.environ.get('SMTP_FROM', 'booking@thegoodflea.com')
 INVOICE_EMAIL_READY = bool(EMAIL_HOST)

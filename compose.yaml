@@ -1,0 +1,91 @@
+name: vendor-crm
+
+x-backend: &backend
+  image: vendor-crm-backend:local
+  build: ./backend
+  env_file: .env
+  environment:
+    DEBUG: "false"
+    SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+    ALLOWED_HOSTS: ${APP_DOMAIN:?Set APP_DOMAIN in .env},backend,localhost
+    CSRF_TRUSTED_ORIGINS: https://${APP_DOMAIN}
+    DATABASE_PATH: /data/db.sqlite3
+    TRUST_PROXY: "true"
+    SECURE_SSL_REDIRECT: "false"
+  volumes:
+    - database:/data
+    - staticfiles:/app/staticfiles
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  init:
+    <<: *backend
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    restart: "no"
+
+  backend:
+    <<: *backend
+    restart: unless-stopped
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build: ./frontend/vendorops
+    restart: unless-stopped
+    environment:
+      ORIGIN: https://${APP_DOMAIN}
+      DJANGO_API_URL: http://backend:8000
+      BODY_SIZE_LIMIT: 3M
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - staticfiles:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  database:
+  staticfiles:
+  caddy_data:
+  caddy_config:

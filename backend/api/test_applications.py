@@ -4,12 +4,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APITestCase
-
 from .models import VendorLead
+from .test_utils import AuthenticatedAPITestCase
 
 
-class ApplicationPipelineTests(APITestCase):
+class ApplicationPipelineTests(AuthenticatedAPITestCase):
     def upload(self, content, name='applications.csv'):
         file = SimpleUploadedFile(name, content.encode('utf-8'), content_type='text/csv')
         return self.client.post(reverse('application-csv-import'), {'file': file}, format='multipart')

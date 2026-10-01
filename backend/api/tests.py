@@ -1,11 +1,11 @@
 from django.urls import reverse
-from rest_framework.test import APITestCase
-
 from .models import CATEGORIES, LEAD_SOURCES, VendorLead
+from .test_utils import AuthenticatedAPITestCase
 
 
-class VendorLeadTests(APITestCase):
+class VendorLeadTests(AuthenticatedAPITestCase):
     def setUp(self):
+        super().setUp()
         self.url = reverse('vendor-leads')
         self.payload = {
             'instagram_handle': '@goodflea', 'business_name': 'Good Flea',

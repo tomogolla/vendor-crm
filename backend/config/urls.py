@@ -21,8 +21,12 @@ from api.invoices import ApproveAndSendInvoice
 from api.email_sequences import SendSequenceEmail
 from api.market_weekends import MarketWeekendList
 from api.applications import ApplicationCsvImport, ApplicationList
+from api.authentication import LoginView, LogoutView, CurrentUserView
 
 urlpatterns = [
+    path('api/auth/login/', LoginView.as_view(), name='auth-login'),
+    path('api/auth/logout/', LogoutView.as_view(), name='auth-logout'),
+    path('api/auth/me/', CurrentUserView.as_view(), name='auth-me'),
     path('api/applications/', ApplicationList.as_view(), name='applications'),
     path('api/applications/import-csv/', ApplicationCsvImport.as_view(), name='application-csv-import'),
     path('api/vendor-leads/', VendorLeadListCreate.as_view(), name='vendor-leads'),

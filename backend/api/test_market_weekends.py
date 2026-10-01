@@ -2,12 +2,11 @@ from decimal import Decimal
 
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APITestCase
-
 from .models import MARKET_WEEKENDS, ApprovalInvoice, MarketWeekendBooking, VendorLead
+from .test_utils import AuthenticatedAPITestCase
 
 
-class MarketWeekendTests(APITestCase):
+class MarketWeekendTests(AuthenticatedAPITestCase):
     def create_booking(self, name, dates, amount='100.00', paid='0.00', decision='accepted'):
         lead = VendorLead.objects.create(
             business_name=name,

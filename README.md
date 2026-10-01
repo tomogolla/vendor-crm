@@ -29,8 +29,16 @@ Business name, category, source, interest level, and at least one contact method
 are required. Follow-up dates and conversation notes are optional. The browser
 converts local follow-up times to UTC before saving and displays them in local time.
 
-The API currently has no access restrictions, matching the prototype's lack of
-authentication. Add access control before exposing vendor contact data publicly.
+Vendor OS requires a Django user account. Create the first operator, then sign in
+at `/login`:
+
+```sh
+backend/.venv/bin/python backend/manage.py createsuperuser
+```
+
+SvelteKit stores the API token in an HTTP-only, same-site cookie. Every application
+route and Django API endpoint requires authentication. Additional accounts can be
+created or disabled in Django Admin, and signing out revokes the active token.
 
 Checks: `python manage.py test api` in `backend`, and `npm run check` / `npm run build`
 in `frontend/vendorops`.
@@ -104,3 +112,9 @@ and reported. Invalid rows are reported by row number while valid rows import.
 Imported records open in the same vendor applicant profile used for review. When
 **Accept application** successfully sends the approval invoice, the funnel stage
 changes to `Vendor`: the record leaves Applications and appears in Vendors.
+
+## DigitalOcean deployment
+
+See [the Droplet deployment guide](deploy/README.md) for the Docker Compose setup,
+automatic HTTPS, environment configuration, persistent storage, backups, and updates.
+Start by copying `.env.example` to `.env` and configuring your domain and secret key.
